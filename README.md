@@ -9,19 +9,19 @@
 
 ### CIFAR 10
 
-|              Model            |     ResNet-18     |    ResNet-110     |  Wide ResNet-28-10  |
-| :---------------------------: | :---------------: | :---------------: | :-----------------: |
-| Cutout                        | 95.6±0.1 (paper)  | 94.8±0.1 (paper)  |  96.9±0.1 (paper)   |
-| KeepCutout                    |        TODO       |        TODO       |        TODO         |
-| KeepCutout (low resolution)   |        TODO       |        TODO       |        TODO         |
-| KeepCutout (early loss)       |        TODO       |        TODO       |        TODO         |
+|              Model            |     ResNet-18     |    ResNet-110     |  Wide ResNet-28-10  |     Shake-Shake     |
+| :---------------------------: | :---------------: | :---------------: | :-----------------: | :-----------------: |
+| Cutout                        | 95.6±0.1 (paper)  | 94.8±0.1 (paper)  |  96.9±0.1 (paper)   |        TODO         |
+| KeepCutout                    |        TODO       |        TODO       |        TODO         |        TODO         |
+| KeepCutout (low resolution)   |        TODO       |        TODO       |        TODO         |        TODO         |
+| KeepCutout (early loss)       |        TODO       |        TODO       |        TODO         |        TODO         |
 
-|              Model              |     ResNet-18     |    ResNet-110     |  Wide ResNet-28-10  |
-| :-----------------------------: | :---------------: | :---------------: | :-----------------: |
-| AutoAugment                     |        95.3       |        TODO       |   97.3±0.1 (paper)  |
-| KeepAutoAugment                 |        TODO       |        TODO       |        TODO         |
-| KeepAutoAugment (low resolution)|        TODO       |        TODO       |        TODO         |
-| KeepAutoAugment (early loss)    |        TODO       |        TODO       |        TODO         |
+|              Model              |     ResNet-18     |    ResNet-110     |  Wide ResNet-28-10  |     Shake-Shake     |
+| :-----------------------------: | :---------------: | :---------------: | :-----------------: | :-----------------: |
+| AutoAugment                     |        95.3       |        TODO       |   97.3±0.1 (paper)  |   97.4±0.1 (paper)  |
+| KeepAutoAugment                 |        TODO       |        TODO       |        TODO         |        TODO         |
+| KeepAutoAugment (low resolution)|        TODO       |        TODO       |        TODO         |        TODO         |
+| KeepAutoAugment (early loss)    |        TODO       |        TODO       |        TODO         |        TODO         |
 
 
 ## Run
