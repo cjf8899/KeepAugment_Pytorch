@@ -9,34 +9,33 @@
 
 ### CIFAR 10
 
-|              Model            |     ResNet-18     |    ResNet-110     |  Wide ResNet-28-10  |     Shake-Shake     |
-| :---------------------------: | :---------------: | :---------------: | :-----------------: | :-----------------: |
-| Cutout                        | 95.6±0.1 (paper)  | 94.8±0.1 (paper)  |  96.9±0.1 (paper)   |        TODO         |
-| KeepCutout                    |        96.0       |        TODO       |        TODO         |        TODO         |
-| KeepCutout (low resolution)   |        96.3       |        TODO       |        TODO         |        TODO         |
-| KeepCutout (early loss)       |        TODO       |        TODO       |        TODO         |        TODO         |
+|              Model            |     ResNet-18     |  Wide ResNet-28-10  |     Shake-Shake     |
+| :---------------------------: | :---------------: | :-----------------: | :-----------------: |
+| Cutout                        | 95.6±0.1 (paper)  |  96.9±0.1 (paper)   |        TODO         |
+| KeepCutout                    |        96.0       |        TODO         |        TODO         |
+| KeepCutout (low resolution)   |        96.3       |        TODO         |        TODO         |
+| KeepCutout (early loss)       |        TODO       |        TODO         |        TODO         |
 
-|              Model              |     ResNet-18     |    ResNet-110     |  Wide ResNet-28-10  |     Shake-Shake     |
-| :-----------------------------: | :---------------: | :---------------: | :-----------------: | :-----------------: |
-| AutoAugment                     |        95.3       |        TODO       |   97.3±0.1 (paper)  |   97.4±0.1 (paper)  |
-| KeepAutoAugment                 |        96.7       |        TODO       |        TODO         |        TODO         |
-| KeepAutoAugment (low resolution)|        96.4       |        TODO       |        TODO         |        TODO         |
-| KeepAutoAugment (early loss)    |        TODO       |        TODO       |        TODO         |        TODO         |
+|              Model              |     ResNet-18     |  Wide ResNet-28-10  |     Shake-Shake     |
+| :-----------------------------: | :---------------: | :-----------------: | :-----------------: |
+| AutoAugment                     |        95.3       |   97.3±0.1 (paper)  |   97.4±0.1 (paper)  |
+| KeepAutoAugment                 |        96.7       |        TODO         |        TODO         |
+| KeepAutoAugment (low resolution)|        96.4       |        TODO         |        TODO         |
+| KeepAutoAugment (early loss)    |        TODO       |        TODO         |        TODO         |
 
 
 ## Run
 
-The type of method is 'keep_cutout', 'keep_cutout_low', 'keep_cutout_low_early'(TODO), 'keep_autoaugment', 'keep_autoaugment_low', 'keep_autoaugment_low_early'(TODO). 
+The type of method is <br>
+'keep_cutout', 'keep_cutout_low', 'keep_cutout_low_early'(TODO), 'keep_autoaugment', 'keep_autoaugment_low', 'keep_autoaugment_low_early'(TODO). 
 
-The type of model is 'resnet18', 'wide_resnet_28_10'.
+The type of model is 'resnet', 'wide_resnet', 'shake'.
 
-ex)
 ```Shell
-python main.py --exps_name cifar10_keepcutout --method keep_cutout --model resnet18
+python train.py --model resnet --method keep_cutout
 ```
 
 ## Referenced. Thank you all:+1:
-baseline code : https://github.com/kuangliu/pytorch-cifar<br>
-cutout code : https://github.com/uoguelph-mlrg/Cutout<br>
+baseline & cutout code : https://github.com/uoguelph-mlrg/Cutout<br>
 randaugment code : https://github.com/ildoonet/pytorch-randaugment<br>
 saliency map code : https://github.com/sunnynevarekar/pytorch-saliency-maps<br>
