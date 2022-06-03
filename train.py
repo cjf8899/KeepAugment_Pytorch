@@ -107,7 +107,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           num_workers=8)
 
 if args.model == 'shake':
-    cnn = ShakeResNet(depth=26, w_base=32, label=10)
+    cnn = ShakeResNet(depth=26, w_base=64, label=10)
 elif args.model == 'wideresnet':
     cnn = WideResNet(depth=28, num_classes=10, widen_factor=10,dropRate=0.3)
 else:
@@ -120,6 +120,8 @@ cnn_optimizer = torch.optim.SGD(cnn.parameters(), lr=args.learning_rate,
                                 momentum=0.9, nesterov=True, weight_decay=5e-4)
 scheduler = MultiStepLR(cnn_optimizer, milestones=[60, 120, 160], gamma=0.2)
 
+if not os.path.isdir('logs'):
+    os.mkdir('logs')
 filename = 'logs/' + test_id + '.csv'
 csv_logger = CSVLogger(args=args, fieldnames=['epoch', 'train_acc', 'test_acc'], filename=filename)
 
