@@ -12,15 +12,15 @@
 |              Model            |     ResNet-18     |    ResNet-110     |  Wide ResNet-28-10  |     Shake-Shake     |
 | :---------------------------: | :---------------: | :---------------: | :-----------------: | :-----------------: |
 | Cutout                        | 95.6±0.1 (paper)  | 94.8±0.1 (paper)  |  96.9±0.1 (paper)   |        TODO         |
-| KeepCutout                    |        TODO       |        TODO       |        TODO         |        TODO         |
-| KeepCutout (low resolution)   |        TODO       |        TODO       |        TODO         |        TODO         |
+| KeepCutout                    |        96.0       |        TODO       |        TODO         |        TODO         |
+| KeepCutout (low resolution)   |        96.3       |        TODO       |        TODO         |        TODO         |
 | KeepCutout (early loss)       |        TODO       |        TODO       |        TODO         |        TODO         |
 
 |              Model              |     ResNet-18     |    ResNet-110     |  Wide ResNet-28-10  |     Shake-Shake     |
 | :-----------------------------: | :---------------: | :---------------: | :-----------------: | :-----------------: |
 | AutoAugment                     |        95.3       |        TODO       |   97.3±0.1 (paper)  |   97.4±0.1 (paper)  |
-| KeepAutoAugment                 |        TODO       |        TODO       |        TODO         |        TODO         |
-| KeepAutoAugment (low resolution)|        TODO       |        TODO       |        TODO         |        TODO         |
+| KeepAutoAugment                 |        96.7       |        TODO       |        TODO         |        TODO         |
+| KeepAutoAugment (low resolution)|        96.4       |        TODO       |        TODO         |        TODO         |
 | KeepAutoAugment (early loss)    |        TODO       |        TODO       |        TODO         |        TODO         |
 
 
@@ -38,5 +38,5 @@ python main.py --exps_name cifar10_keepcutout --method keep_cutout --model resne
 ## Referenced. Thank you all:+1:
 baseline code : https://github.com/kuangliu/pytorch-cifar<br>
 cutout code : https://github.com/uoguelph-mlrg/Cutout<br>
-Randaugment code : https://github.com/ildoonet/pytorch-randaugment<br>
+randaugment code : https://github.com/ildoonet/pytorch-randaugment<br>
 saliency map code : https://github.com/sunnynevarekar/pytorch-saliency-maps<br>
