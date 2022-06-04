@@ -1,4 +1,5 @@
 
+import os
 import pdb
 import argparse
 import numpy as np
@@ -15,17 +16,16 @@ from torchvision import datasets, transforms
 
 from util.misc import CSVLogger
 from util.keep_cutout import Cutout, Keep_Cutout, Keep_Cutout_Low
-from util.keep_autoaugment import RandAugment, Keep_Autoaugment, Keep_Autoaugment_Low
-
-from model.resnet import ResNet18
-from model.wide_resnet import WideResNet
-from model.shake_resnet import ShakeResNet
+from util.keep_autoaugment import CIFAR10Policy, Keep_Autoaugment, Keep_Autoaugment_Low
+from model.resnet import ResNet18, ResNet18_Early
+from model.wide_resnet import WideResNet, WideResNet_Early
+from model.shake_resnet import ShakeResNet, ShakeResNet_Early
 
 
 model_options = ['resnet', 'wideresnet', 'shake']
 dataset_options = ['cifar10']
-method_options = ['none', 'cutout', 'keep_cutout', 'keep_cutout_low',  
-                   'autoaugment','keep_autoaugment','keep_autoaugment_low']
+method_options = ['none', 'cutout', 'keep_cutout', 'keep_cutout_low', 'keep_cutout_early', 'keep_cutout_low_early',
+                   'autoaugment','keep_autoaugment','keep_autoaugment_low', 'keep_autoaugment_early', 'keep_autoaugment_low_early']
 
 parser = argparse.ArgumentParser(description='CNN')
 parser.add_argument('--dataset', '-d', default='cifar10', choices=dataset_options)
@@ -70,15 +70,23 @@ test_transform = transforms.Compose([
 if args.method=='cutout':
     train_transform.transforms.append(Cutout(n_holes=1, length=args.length))
 elif args.method=='autoaugment':
-    train_transform.transforms.insert(0, RandAugment(args.N, args.M))
+    train_transform.transforms.insert(2, CIFAR10Policy())
 elif args.method=='keep_cutout':
     keep = Keep_Cutout(train_transform, mean, std, args.length)
 elif args.method=='keep_cutout_low':
     keep = Keep_Cutout_Low(train_transform, mean, std, args.length)
+elif args.method=='keep_cutout_early':
+    keep = Keep_Cutout(train_transform, mean, std, args.length, True)
+elif args.method=='keep_cutout_low_early':
+    keep = Keep_Cutout_Low(train_transform, mean, std, args.length, True)
 elif args.method=='keep_autoaugment':
     keep = Keep_Autoaugment(train_transform, mean, std, args.length, args.N, args.M)
 elif args.method=='keep_autoaugment_low':
     keep = Keep_Autoaugment_Low(train_transform, mean, std, args.length, args.N, args.M)
+elif args.method=='keep_autoaugment_early':
+    keep = Keep_Autoaugment(train_transform, mean, std, args.length, args.N, args.M, True)
+elif args.method=='keep_autoaugment_low_early':
+    keep = Keep_Autoaugment_Low(train_transform, mean, std, args.length, args.N, args.M, True)
 
 
 
@@ -108,11 +116,18 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 
 if args.model == 'shake':
     cnn = ShakeResNet(depth=26, w_base=64, label=10)
+    if 'early' in args.method:
+        cnn = ShakeResNet_Early(depth=26, w_base=64, label=10)
 elif args.model == 'wideresnet':
-    cnn = WideResNet(depth=28, num_classes=10, widen_factor=10,dropRate=0.3)
+    cnn = WideResNet(depth=28,widen_factor=10, dropout_rate=0.0, num_classes=10)
+    if 'early' in args.method:
+        cnn = WideResNet_Early(depth=28,widen_factor=10, dropout_rate=0.0, num_classes=10)
 else:
     cnn = ResNet18(num_classes=10)
-
+    if 'early' in args.method:
+        cnn = ResNet18_Early(num_classes=10)
+        
+print(cnn)
 
 cnn = cnn.cuda()
 criterion = nn.CrossEntropyLoss().cuda()
@@ -122,6 +137,7 @@ scheduler = MultiStepLR(cnn_optimizer, milestones=[60, 120, 160], gamma=0.2)
 
 if not os.path.isdir('logs'):
     os.mkdir('logs')
+
 filename = 'logs/' + test_id + '.csv'
 csv_logger = CSVLogger(args=args, fieldnames=['epoch', 'train_acc', 'test_acc'], filename=filename)
 
@@ -135,7 +151,10 @@ def test(loader):
         labels = labels.cuda()
 
         with torch.no_grad():
-            pred = cnn(images)
+            if 'early' in args.method:  
+                pred,_ = cnn(images,False)
+            else:
+                pred = cnn(images)
 
         pred = torch.max(pred.data, 1)[1]
         total += labels.size(0)
@@ -161,10 +180,17 @@ for epoch in range(args.epochs):
         if 'keep' in args.method: 
             images = keep(images, cnn)
 
+            
         cnn.zero_grad()
-        pred = cnn(images)
-
-        xentropy_loss = criterion(pred, labels)
+        if 'early' in args.method:  
+            pred,aux_pred = cnn(images,False)
+            xentropy_loss = criterion(pred, labels)
+            aux_loss = criterion(aux_pred, labels)
+            xentropy_loss += aux_loss*0.3
+        else:
+            pred = cnn(images)
+            xentropy_loss = criterion(pred, labels)
+            
         xentropy_loss.backward()
         cnn_optimizer.step()
 

@@ -2,7 +2,6 @@
 # https://github.com/rpmcruz/autoaugment/blob/master/transformations.py
 import random
 
-import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
 import numpy as np
 import torch
 from PIL import Image
@@ -10,21 +9,27 @@ import torch
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
+
+from PIL import Image, ImageEnhance, ImageOps
+
+
 class Keep_Autoaugment_Low(object):
     """Randomly mask out one or more patches from an image.
     Args:
         n_holes (int): Number of patches to cut out of each image.
         length (int): The length (in pixels) of each square patch.
     """
-    def __init__(self, train_transform, mean, std, length, N, M):
+    def __init__(self, train_transform, mean, std, length, N, M, early=False):
         self.trans = train_transform
         self.length = int(length/2)
         self.n = N
         self.m = M
-        self.augment_list = augment_list()
+        self.early= early
         self.denomal = transforms.Normalize((-mean[0]/std[0],-mean[1]/std[1], -mean[2]/std[2]), (1/std[0], 1/std[1], 1/std[2]))
         self.tensor = transforms.ToTensor()
         self.pil = transforms.ToPILImage()
+        self.auto = CIFAR10Policy()
+        
         
 
     def __call__(self, images, model):
@@ -36,7 +41,12 @@ class Keep_Autoaugment_Low(object):
         images_half = F.interpolate(images_, scale_factor=0.5, mode='bicubic',align_corners=True)
         images_half.requires_grad = True
 
-        preds = model(images_half)
+        if self.early:
+            preds = model(images_half,True)
+        else:
+            preds = model(images_half)
+        
+        
         score, _ = torch.max(preds, 1)
         score.mean().backward()
         slc_, _ = torch.max(torch.abs(images_half.grad), dim=1)
@@ -50,7 +60,6 @@ class Keep_Autoaugment_Low(object):
         
         
         for i,(img, slc) in enumerate(zip(images_, slc_)):
-            ops = random.choices(self.augment_list, k=self.n)
             mask = np.ones((h*2, w*2), np.float32)
             mask_zero = torch.Tensor(np.zeros(img.shape, np.float32))
             
@@ -70,9 +79,10 @@ class Keep_Autoaugment_Low(object):
                     break
 
             img = self.pil(img)
-            for op, minval, maxval in ops:
-                val = (float(self.m) / 30) * float(maxval - minval) + minval
-                img = op(img, val)
+            img = self.auto(img)
+#             for op, minval, maxval in ops:
+#                 val = (float(self.m) / 30) * float(maxval - minval) + minval
+#                 img = op(img, val)
                 
             img = self.tensor(img)
             img[:,y1: y2, x1: x2] = mask_zero[:,y1: y2, x1: x2]
@@ -94,14 +104,16 @@ class Keep_Autoaugment(object):
         n_holes (int): Number of patches to cut out of each image.
         length (int): The length (in pixels) of each square patch.
     """
-    def __init__(self, train_transform, mean, std, length, N, M):
+    def __init__(self, train_transform, mean, std, length, N, M, early=False):
         self.length = length
         self.n = N
         self.m = M
-        self.augment_list = augment_list()
+        self.early = early
         self.denomal = transforms.Normalize((-mean[0]/std[0],-mean[1]/std[1], -mean[2]/std[2]), (1/std[0], 1/std[1], 1/std[2]))
         self.tensor = transforms.ToTensor()
         self.pil = transforms.ToPILImage()
+        self.auto = CIFAR10Policy()
+        
         self.trans = train_transform
 
     def __call__(self, images, model):
@@ -110,7 +122,13 @@ class Keep_Autoaugment(object):
         model.eval()
         images_ = images.clone().detach()
         images_.requires_grad = True
-        preds = model(images_)
+        
+        if self.early:
+            preds = model(images_,True)
+        else:
+            preds = model(images_)
+        
+        
         score, _ = torch.max(preds, 1)
         score.mean().backward()
         slc_, _ = torch.max(torch.abs(images_.grad), dim=1)
@@ -123,7 +141,7 @@ class Keep_Autoaugment(object):
         slc_ = slc_.view(b, h, w)
         
         for i,(img, slc) in enumerate(zip(images_, slc_)):
-            ops = random.choices(self.augment_list, k=self.n)
+#             ops = random.choices(self.augment_list, k=self.n)
             mask = np.ones((h, w), np.float32)
             mask_zero = torch.Tensor(np.zeros(img.shape, np.float32))
             
@@ -142,9 +160,10 @@ class Keep_Autoaugment(object):
                     break
 
             img = self.pil(img)
-            for op, minval, maxval in ops:
-                val = (float(self.m) / 30) * float(maxval - minval) + minval
-                img = op(img, val)
+            img = self.auto(img)
+#             for op, minval, maxval in ops:
+#                 val = (float(self.m) / 30) * float(maxval - minval) + minval
+#                 img = op(img, val)
                 
             img = self.tensor(img)
             img[:,y1: y2, x1: x2] = mask_zero[:,y1: y2, x1: x2]
@@ -161,257 +180,310 @@ class Keep_Autoaugment(object):
 
 
 
-def ShearX(img, v):  # [-0.3, 0.3]
-    assert -0.3 <= v <= 0.3
-    if random.random() > 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, v, 0, 0, 1, 0))
 
 
-def ShearY(img, v):  # [-0.3, 0.3]
-    assert -0.3 <= v <= 0.3
-    if random.random() > 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, v, 1, 0))
+class ShearX(object):
+    def __init__(self, fillcolor=(128, 128, 128)):
+        self.fillcolor = fillcolor
+
+    def __call__(self, x, magnitude):
+        return x.transform(
+            x.size, Image.AFFINE, (1, magnitude * random.choice([-1, 1]), 0, 0, 1, 0),
+            Image.BICUBIC, fillcolor=self.fillcolor)
 
 
-def TranslateX(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert -0.45 <= v <= 0.45
-    if random.random() > 0.5:
-        v = -v
-    v = v * img.size[0]
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0))
+class ShearY(object):
+    def __init__(self, fillcolor=(128, 128, 128)):
+        self.fillcolor = fillcolor
+
+    def __call__(self, x, magnitude):
+        return x.transform(
+            x.size, Image.AFFINE, (1, 0, 0, magnitude * random.choice([-1, 1]), 1, 0),
+            Image.BICUBIC, fillcolor=self.fillcolor)
 
 
-def TranslateXabs(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert 0 <= v
-    if random.random() > 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, v, 0, 1, 0))
+class TranslateX(object):
+    def __init__(self, fillcolor=(128, 128, 128)):
+        self.fillcolor = fillcolor
+
+    def __call__(self, x, magnitude):
+        return x.transform(
+            x.size, Image.AFFINE, (1, 0, magnitude * x.size[0] * random.choice([-1, 1]), 0, 1, 0),
+            fillcolor=self.fillcolor)
 
 
-def TranslateY(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert -0.45 <= v <= 0.45
-    if random.random() > 0.5:
-        v = -v
-    v = v * img.size[1]
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v))
+class TranslateY(object):
+    def __init__(self, fillcolor=(128, 128, 128)):
+        self.fillcolor = fillcolor
+
+    def __call__(self, x, magnitude):
+        return x.transform(
+            x.size, Image.AFFINE, (1, 0, 0, 0, 1, magnitude * x.size[1] * random.choice([-1, 1])),
+            fillcolor=self.fillcolor)
 
 
-def TranslateYabs(img, v):  # [-150, 150] => percentage: [-0.45, 0.45]
-    assert 0 <= v
-    if random.random() > 0.5:
-        v = -v
-    return img.transform(img.size, PIL.Image.AFFINE, (1, 0, 0, 0, 1, v))
+class Rotate(object):
+    # from https://stackoverflow.com/questions/
+    # 5252170/specify-image-filling-color-when-rotating-in-python-with-pil-and-setting-expand
+    def __call__(self, x, magnitude):
+        rot = x.convert("RGBA").rotate(magnitude * random.choice([-1, 1]))
+        return Image.composite(rot, Image.new("RGBA", rot.size, (128,) * 4), rot).convert(x.mode)
 
 
-def Rotate(img, v):  # [-30, 30]
-    assert -30 <= v <= 30
-    if random.random() > 0.5:
-        v = -v
-    return img.rotate(v)
+class Color(object):
+    def __call__(self, x, magnitude):
+        return ImageEnhance.Color(x).enhance(1 + magnitude * random.choice([-1, 1]))
 
 
-def AutoContrast(img, _):
-    return PIL.ImageOps.autocontrast(img)
+class Posterize(object):
+    def __call__(self, x, magnitude):
+        return ImageOps.posterize(x, magnitude)
 
 
-def Invert(img, _):
-    return PIL.ImageOps.invert(img)
+class Solarize(object):
+    def __call__(self, x, magnitude):
+        return ImageOps.solarize(x, magnitude)
 
 
-def Equalize(img, _):
-    return PIL.ImageOps.equalize(img)
+class Contrast(object):
+    def __call__(self, x, magnitude):
+        return ImageEnhance.Contrast(x).enhance(1 + magnitude * random.choice([-1, 1]))
 
 
-def Flip(img, _):  # not from the paper
-    return PIL.ImageOps.mirror(img)
+class Sharpness(object):
+    def __call__(self, x, magnitude):
+        return ImageEnhance.Sharpness(x).enhance(1 + magnitude * random.choice([-1, 1]))
 
 
-def Solarize(img, v):  # [0, 256]
-    assert 0 <= v <= 256
-    return PIL.ImageOps.solarize(img, v)
+class Brightness(object):
+    def __call__(self, x, magnitude):
+        return ImageEnhance.Brightness(x).enhance(1 + magnitude * random.choice([-1, 1]))
 
 
-def SolarizeAdd(img, addition=0, threshold=128):
-    img_np = np.array(img).astype(np.int)
-    img_np = img_np + addition
-    img_np = np.clip(img_np, 0, 255)
-    img_np = img_np.astype(np.uint8)
-    img = Image.fromarray(img_np)
-    return PIL.ImageOps.solarize(img, threshold)
+class AutoContrast(object):
+    def __call__(self, x, magnitude):
+        return ImageOps.autocontrast(x)
 
 
-def Posterize(img, v):  # [4, 8]
-    v = int(v)
-    v = max(1, v)
-    return PIL.ImageOps.posterize(img, v)
+class Equalize(object):
+    def __call__(self, x, magnitude):
+        return ImageOps.equalize(x)
 
 
-def Contrast(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
-    return PIL.ImageEnhance.Contrast(img).enhance(v)
+class Invert(object):
+    def __call__(self, x, magnitude):
+        return ImageOps.invert(x)
+    
+    
+    
+    
+    
+    
 
 
-def Color(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
-    return PIL.ImageEnhance.Color(img).enhance(v)
 
-
-def Brightness(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
-    return PIL.ImageEnhance.Brightness(img).enhance(v)
-
-
-def Sharpness(img, v):  # [0.1,1.9]
-    assert 0.1 <= v <= 1.9
-    return PIL.ImageEnhance.Sharpness(img).enhance(v)
-
-
-def Cutout(img, v):  # [0, 60] => percentage: [0, 0.2]
-    assert 0.0 <= v <= 0.2
-    if v <= 0.:
-        return img
-
-    v = v * img.size[0]
-    return CutoutAbs(img, v)
-
-
-def CutoutAbs(img, v):  # [0, 60] => percentage: [0, 0.2]
-    # assert 0 <= v <= 20
-    if v < 0:
-        return img
-    w, h = img.size
-    x0 = np.random.uniform(w)
-    y0 = np.random.uniform(h)
-
-    x0 = int(max(0, x0 - v / 2.))
-    y0 = int(max(0, y0 - v / 2.))
-    x1 = min(w, x0 + v)
-    y1 = min(h, y0 + v)
-
-    xy = (x0, y0, x1, y1)
-    color = (125, 123, 114)
-    # color = (0, 0, 0)
-    img = img.copy()
-    PIL.ImageDraw.Draw(img).rectangle(xy, color)
-    return img
-
-
-def SamplePairing(imgs):  # [0, 0.4]
-    def f(img1, v):
-        i = np.random.choice(len(imgs))
-        img2 = PIL.Image.fromarray(imgs[i])
-        return PIL.Image.blend(img1, img2, v)
-
-    return f
-
-
-def Identity(img, v):
-    return img
-
-
-def augment_list():  # 16 oeprations and their ranges
-    # https://github.com/google-research/uda/blob/master/image/randaugment/policies.py#L57
-    # l = [
-    #     (Identity, 0., 1.0),
-    #     (ShearX, 0., 0.3),  # 0
-    #     (ShearY, 0., 0.3),  # 1
-    #     (TranslateX, 0., 0.33),  # 2
-    #     (TranslateY, 0., 0.33),  # 3
-    #     (Rotate, 0, 30),  # 4
-    #     (AutoContrast, 0, 1),  # 5
-    #     (Invert, 0, 1),  # 6
-    #     (Equalize, 0, 1),  # 7
-    #     (Solarize, 0, 110),  # 8
-    #     (Posterize, 4, 8),  # 9
-    #     # (Contrast, 0.1, 1.9),  # 10
-    #     (Color, 0.1, 1.9),  # 11
-    #     (Brightness, 0.1, 1.9),  # 12
-    #     (Sharpness, 0.1, 1.9),  # 13
-    #     # (Cutout, 0, 0.2),  # 14
-    #     # (SamplePairing(imgs), 0, 0.4),  # 15
-    # ]
-
-    # https://github.com/tensorflow/tpu/blob/8462d083dd89489a79e3200bcc8d4063bf362186/models/official/efficientnet/autoaugment.py#L505
-    l = [
-        (AutoContrast, 0, 1),
-        (Equalize, 0, 1),
-        (Invert, 0, 1),
-        (Rotate, 0, 30),
-        (Posterize, 0, 4),
-        (Solarize, 0, 256),
-        (SolarizeAdd, 0, 110),
-        (Color, 0.1, 1.9),
-        (Contrast, 0.1, 1.9),
-        (Brightness, 0.1, 1.9),
-        (Sharpness, 0.1, 1.9),
-        (ShearX, 0., 0.3),
-        (ShearY, 0., 0.3),
-        (CutoutAbs, 0, 40),
-        (TranslateXabs, 0., 100),
-        (TranslateYabs, 0., 100),
-    ]
-
-    return l
-
-
-class Lighting(object):
-    """Lighting noise(AlexNet - style PCA - based noise)"""
-
-    def __init__(self, alphastd, eigval, eigvec):
-        self.alphastd = alphastd
-        self.eigval = torch.Tensor(eigval)
-        self.eigvec = torch.Tensor(eigvec)
-
-    def __call__(self, img):
-        if self.alphastd == 0:
-            return img
-
-        alpha = img.new().resize_(3).normal_(0, self.alphastd)
-        rgb = self.eigvec.type_as(img).clone() \
-            .mul(alpha.view(1, 3).expand(3, 3)) \
-            .mul(self.eigval.view(1, 3).expand(3, 3)) \
-            .sum(1).squeeze()
-
-        return img.add(rgb.view(3, 1, 1).expand_as(img))
-
-
-class CutoutDefault(object):
+class ImageNetPolicy(object):
+    """ Randomly choose one of the best 24 Sub-policies on ImageNet.
+        Example:
+        >>> policy = ImageNetPolicy()
+        >>> transformed = policy(image)
+        Example as a PyTorch Transform:
+        >>> transform = transforms.Compose([
+        >>>     transforms.Resize(256),
+        >>>     ImageNetPolicy(),
+        >>>     transforms.ToTensor()])
     """
-    Reference : https://github.com/quark0/darts/blob/master/cnn/utils.py
+    def __init__(self, fillcolor=(128, 128, 128)):
+        self.policies = [
+            SubPolicy(0.4, "posterize", 8, 0.6, "rotate", 9, fillcolor),
+            SubPolicy(0.6, "solarize", 5, 0.6, "autocontrast", 5, fillcolor),
+            SubPolicy(0.8, "equalize", 8, 0.6, "equalize", 3, fillcolor),
+            SubPolicy(0.6, "posterize", 7, 0.6, "posterize", 6, fillcolor),
+            SubPolicy(0.4, "equalize", 7, 0.2, "solarize", 4, fillcolor),
+
+            SubPolicy(0.4, "equalize", 4, 0.8, "rotate", 8, fillcolor),
+            SubPolicy(0.6, "solarize", 3, 0.6, "equalize", 7, fillcolor),
+            SubPolicy(0.8, "posterize", 5, 1.0, "equalize", 2, fillcolor),
+            SubPolicy(0.2, "rotate", 3, 0.6, "solarize", 8, fillcolor),
+            SubPolicy(0.6, "equalize", 8, 0.4, "posterize", 6, fillcolor),
+
+            SubPolicy(0.8, "rotate", 8, 0.4, "color", 0, fillcolor),
+            SubPolicy(0.4, "rotate", 9, 0.6, "equalize", 2, fillcolor),
+            SubPolicy(0.0, "equalize", 7, 0.8, "equalize", 8, fillcolor),
+            SubPolicy(0.6, "invert", 4, 1.0, "equalize", 8, fillcolor),
+            SubPolicy(0.6, "color", 4, 1.0, "contrast", 8, fillcolor),
+
+            SubPolicy(0.8, "rotate", 8, 1.0, "color", 2, fillcolor),
+            SubPolicy(0.8, "color", 8, 0.8, "solarize", 7, fillcolor),
+            SubPolicy(0.4, "sharpness", 7, 0.6, "invert", 8, fillcolor),
+            SubPolicy(0.6, "shearX", 5, 1.0, "equalize", 9, fillcolor),
+            SubPolicy(0.4, "color", 0, 0.6, "equalize", 3, fillcolor),
+
+            SubPolicy(0.4, "equalize", 7, 0.2, "solarize", 4, fillcolor),
+            SubPolicy(0.6, "solarize", 5, 0.6, "autocontrast", 5, fillcolor),
+            SubPolicy(0.6, "invert", 4, 1.0, "equalize", 8, fillcolor),
+            SubPolicy(0.6, "color", 4, 1.0, "contrast", 8, fillcolor),
+            SubPolicy(0.8, "equalize", 8, 0.6, "equalize", 3, fillcolor)
+        ]
+
+    def __call__(self, img):
+        policy_idx = random.randint(0, len(self.policies) - 1)
+        return self.policies[policy_idx](img)
+
+    def __repr__(self):
+        return "AutoAugment ImageNet Policy"
+
+
+class CIFAR10Policy(object):
+    """ Randomly choose one of the best 25 Sub-policies on CIFAR10.
+        Example:
+        >>> policy = CIFAR10Policy()
+        >>> transformed = policy(image)
+        Example as a PyTorch Transform:
+        >>> transform=transforms.Compose([
+        >>>     transforms.Resize(256),
+        >>>     CIFAR10Policy(),
+        >>>     transforms.ToTensor()])
     """
-    def __init__(self, length):
-        self.length = length
+    def __init__(self, fillcolor=(128, 128, 128)):
+        self.policies = [
+            SubPolicy(0.1, "invert", 7, 0.2, "contrast", 6, fillcolor),
+            SubPolicy(0.7, "rotate", 2, 0.3, "translateX", 9, fillcolor),
+            SubPolicy(0.8, "sharpness", 1, 0.9, "sharpness", 3, fillcolor),
+            SubPolicy(0.5, "shearY", 8, 0.7, "translateY", 9, fillcolor),
+            SubPolicy(0.5, "autocontrast", 8, 0.9, "equalize", 2, fillcolor),
+
+            SubPolicy(0.2, "shearY", 7, 0.3, "posterize", 7, fillcolor),
+            SubPolicy(0.4, "color", 3, 0.6, "brightness", 7, fillcolor),
+            SubPolicy(0.3, "sharpness", 9, 0.7, "brightness", 9, fillcolor),
+            SubPolicy(0.6, "equalize", 5, 0.5, "equalize", 1, fillcolor),
+            SubPolicy(0.6, "contrast", 7, 0.6, "sharpness", 5, fillcolor),
+
+            SubPolicy(0.7, "color", 7, 0.5, "translateX", 8, fillcolor),
+            SubPolicy(0.3, "equalize", 7, 0.4, "autocontrast", 8, fillcolor),
+            SubPolicy(0.4, "translateY", 3, 0.2, "sharpness", 6, fillcolor),
+            SubPolicy(0.9, "brightness", 6, 0.2, "color", 8, fillcolor),
+            SubPolicy(0.5, "solarize", 2, 0.0, "invert", 3, fillcolor),
+
+            SubPolicy(0.2, "equalize", 0, 0.6, "autocontrast", 0, fillcolor),
+            SubPolicy(0.2, "equalize", 8, 0.6, "equalize", 4, fillcolor),
+            SubPolicy(0.9, "color", 9, 0.6, "equalize", 6, fillcolor),
+            SubPolicy(0.8, "autocontrast", 4, 0.2, "solarize", 8, fillcolor),
+            SubPolicy(0.1, "brightness", 3, 0.7, "color", 0, fillcolor),
+
+            SubPolicy(0.4, "solarize", 5, 0.9, "autocontrast", 3, fillcolor),
+            SubPolicy(0.9, "translateY", 9, 0.7, "translateY", 9, fillcolor),
+            SubPolicy(0.9, "autocontrast", 2, 0.8, "solarize", 3, fillcolor),
+            SubPolicy(0.8, "equalize", 8, 0.1, "invert", 3, fillcolor),
+            SubPolicy(0.7, "translateY", 9, 0.9, "autocontrast", 1, fillcolor)
+        ]
 
     def __call__(self, img):
-        h, w = img.size(1), img.size(2)
-        mask = np.ones((h, w), np.float32)
-        y = np.random.randint(h)
-        x = np.random.randint(w)
+        policy_idx = random.randint(0, len(self.policies) - 1)
+        return self.policies[policy_idx](img)
 
-        y1 = np.clip(y - self.length // 2, 0, h)
-        y2 = np.clip(y + self.length // 2, 0, h)
-        x1 = np.clip(x - self.length // 2, 0, w)
-        x2 = np.clip(x + self.length // 2, 0, w)
-
-        mask[y1: y2, x1: x2] = 0.
-        mask = torch.from_numpy(mask)
-        mask = mask.expand_as(img)
-        img *= mask
-        return img
+    def __repr__(self):
+        return "AutoAugment CIFAR10 Policy"
 
 
-class RandAugment:
-    def __init__(self, n, m):
-        self.n = n
-        self.m = m      # [0, 30]
-        self.augment_list = augment_list()
+class SVHNPolicy(object):
+    """ Randomly choose one of the best 25 Sub-policies on SVHN.
+        Example:
+        >>> policy = SVHNPolicy()
+        >>> transformed = policy(image)
+        Example as a PyTorch Transform:
+        >>> transform=transforms.Compose([
+        >>>     transforms.Resize(256),
+        >>>     SVHNPolicy(),
+        >>>     transforms.ToTensor()])
+    """
+    def __init__(self, fillcolor=(128, 128, 128)):
+        self.policies = [
+            SubPolicy(0.9, "shearX", 4, 0.2, "invert", 3, fillcolor),
+            SubPolicy(0.9, "shearY", 8, 0.7, "invert", 5, fillcolor),
+            SubPolicy(0.6, "equalize", 5, 0.6, "solarize", 6, fillcolor),
+            SubPolicy(0.9, "invert", 3, 0.6, "equalize", 3, fillcolor),
+            SubPolicy(0.6, "equalize", 1, 0.9, "rotate", 3, fillcolor),
+
+            SubPolicy(0.9, "shearX", 4, 0.8, "autocontrast", 3, fillcolor),
+            SubPolicy(0.9, "shearY", 8, 0.4, "invert", 5, fillcolor),
+            SubPolicy(0.9, "shearY", 5, 0.2, "solarize", 6, fillcolor),
+            SubPolicy(0.9, "invert", 6, 0.8, "autocontrast", 1, fillcolor),
+            SubPolicy(0.6, "equalize", 3, 0.9, "rotate", 3, fillcolor),
+
+            SubPolicy(0.9, "shearX", 4, 0.3, "solarize", 3, fillcolor),
+            SubPolicy(0.8, "shearY", 8, 0.7, "invert", 4, fillcolor),
+            SubPolicy(0.9, "equalize", 5, 0.6, "translateY", 6, fillcolor),
+            SubPolicy(0.9, "invert", 4, 0.6, "equalize", 7, fillcolor),
+            SubPolicy(0.3, "contrast", 3, 0.8, "rotate", 4, fillcolor),
+
+            SubPolicy(0.8, "invert", 5, 0.0, "translateY", 2, fillcolor),
+            SubPolicy(0.7, "shearY", 6, 0.4, "solarize", 8, fillcolor),
+            SubPolicy(0.6, "invert", 4, 0.8, "rotate", 4, fillcolor),
+            SubPolicy(0.3, "shearY", 7, 0.9, "translateX", 3, fillcolor),
+            SubPolicy(0.1, "shearX", 6, 0.6, "invert", 5, fillcolor),
+
+            SubPolicy(0.7, "solarize", 2, 0.6, "translateY", 7, fillcolor),
+            SubPolicy(0.8, "shearY", 4, 0.8, "invert", 8, fillcolor),
+            SubPolicy(0.7, "shearX", 9, 0.8, "translateY", 3, fillcolor),
+            SubPolicy(0.8, "shearY", 5, 0.7, "autocontrast", 3, fillcolor),
+            SubPolicy(0.7, "shearX", 2, 0.1, "invert", 5, fillcolor)
+        ]
 
     def __call__(self, img):
-        ops = random.choices(self.augment_list, k=self.n)
-        for op, minval, maxval in ops:
-            val = (float(self.m) / 30) * float(maxval - minval) + minval
-            img = op(img, val)
+        policy_idx = random.randint(0, len(self.policies) - 1)
+        return self.policies[policy_idx](img)
 
+    def __repr__(self):
+        return "AutoAugment SVHN Policy"
+
+
+class SubPolicy(object):
+    def __init__(self, p1, operation1, magnitude_idx1, p2, operation2, magnitude_idx2, fillcolor=(128, 128, 128)):
+        ranges = {
+            "shearX": np.linspace(0, 0.3, 10),
+            "shearY": np.linspace(0, 0.3, 10),
+            "translateX": np.linspace(0, 150 / 331, 10),
+            "translateY": np.linspace(0, 150 / 331, 10),
+            "rotate": np.linspace(0, 30, 10),
+            "color": np.linspace(0.0, 0.9, 10),
+            "posterize": np.round(np.linspace(8, 4, 10), 0).astype(np.int),
+            "solarize": np.linspace(256, 0, 10),
+            "contrast": np.linspace(0.0, 0.9, 10),
+            "sharpness": np.linspace(0.0, 0.9, 10),
+            "brightness": np.linspace(0.0, 0.9, 10),
+            "autocontrast": [0] * 10,
+            "equalize": [0] * 10,
+            "invert": [0] * 10
+        }
+
+        func = {
+            "shearX": ShearX(fillcolor=fillcolor),
+            "shearY": ShearY(fillcolor=fillcolor),
+            "translateX": TranslateX(fillcolor=fillcolor),
+            "translateY": TranslateY(fillcolor=fillcolor),
+            "rotate": Rotate(),
+            "color": Color(),
+            "posterize": Posterize(),
+            "solarize": Solarize(),
+            "contrast": Contrast(),
+            "sharpness": Sharpness(),
+            "brightness": Brightness(),
+            "autocontrast": AutoContrast(),
+            "equalize": Equalize(),
+            "invert": Invert()
+        }
+
+        self.p1 = p1
+        self.operation1 = func[operation1]
+        self.magnitude1 = ranges[operation1][magnitude_idx1]
+        self.p2 = p2
+        self.operation2 = func[operation2]
+        self.magnitude2 = ranges[operation2][magnitude_idx2]
+
+    def __call__(self, img):
+        if random.random() < self.p1:
+            img = self.operation1(img, self.magnitude1)
+        if random.random() < self.p2:
+            img = self.operation2(img, self.magnitude2)
         return img
