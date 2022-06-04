@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from torchvision.utils import make_grid
 from torchvision import datasets, transforms
@@ -133,7 +133,7 @@ cnn = cnn.cuda()
 criterion = nn.CrossEntropyLoss().cuda()
 cnn_optimizer = torch.optim.SGD(cnn.parameters(), lr=args.learning_rate,
                                 momentum=0.9, nesterov=True, weight_decay=5e-4)
-scheduler = MultiStepLR(cnn_optimizer, milestones=[60, 120, 160], gamma=0.2)
+scheduler = CosineAnnealingLR(cnn_optimizer, T_max=args.epochs, eta_min=0.)
 
 if not os.path.isdir('logs'):
     os.mkdir('logs')
