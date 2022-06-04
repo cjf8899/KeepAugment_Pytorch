@@ -14,13 +14,13 @@
 | Cutout                        | 95.6±0.1 (paper)  |  96.9±0.1 (paper)   |        TODO         |
 | KeepCutout                    |        96.0       |        TODO         |        TODO         |
 | KeepCutout (low resolution)   |        96.3       |        TODO         |        TODO         |
-| KeepCutout (early loss)       |        TODO       |        TODO         |        TODO         |
+| KeepCutout (early loss)       |        96.2       |        TODO         |        TODO         |
 
 |              Model              |     ResNet-18     |  Wide ResNet-28-10  |     Shake-Shake     |
 | :-----------------------------: | :---------------: | :-----------------: | :-----------------: |
-| AutoAugment                     |        95.3       |   97.3±0.1 (paper)  |   97.4±0.1 (paper)  |
-| KeepAutoAugment                 |        96.7       |        TODO         |        TODO         |
-| KeepAutoAugment (low resolution)|        96.4       |        TODO         |        TODO         |
+| AutoAugment                     |        TODO       |   97.3±0.1 (paper)  |   97.4±0.1 (paper)  |
+| KeepAutoAugment                 |        TODO       |        TODO         |        TODO         |
+| KeepAutoAugment (low resolution)|        TODO       |        TODO         |        TODO         |
 | KeepAutoAugment (early loss)    |        TODO       |        TODO         |        TODO         |
 
 
