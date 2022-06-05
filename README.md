@@ -15,6 +15,7 @@
 | KeepCutout                    |        0.962      |      0.9721         |
 | KeepCutout (low resolution)   |        0.961      |      0.9719         |
 | KeepCutout (early loss)       |        0.9621     |        TODO         |
+| KeepCutout (low + early)      |        TODO       |        TODO         |
 
 |              Model              |     ResNet-18     |  Wide ResNet-28-10  |
 | :-----------------------------: | :---------------: | :-----------------: |
@@ -22,6 +23,7 @@
 | KeepAutoAugment                 |       0.9646      |        0.9747       |
 | KeepAutoAugment (low resolution)|       0.9639      |        0.9753       |
 | KeepAutoAugment (early loss)    |       0.9635      |        0.9748       |
+| KeepAutoAugment (low + early)   |       TODO        |         TODO        |
 
 
 ## Run
@@ -38,5 +40,5 @@ python train.py --model resnet --method keep_cutout
 
 ## Referenced. Thank you all:+1:
 baseline & cutout code : https://github.com/uoguelph-mlrg/Cutout<br>
-randaugment code : https://github.com/ildoonet/pytorch-randaugment<br>
+autoaugment code : https://github.com/DeepVoltaire/AutoAugment<br>
 saliency map code : https://github.com/sunnynevarekar/pytorch-saliency-maps<br>
