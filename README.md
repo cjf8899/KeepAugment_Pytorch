@@ -38,6 +38,8 @@ The type of model is 'resnet', 'wide_resnet'.
 python train.py --model resnet --method keep_cutout
 ```
 
+Any feedback on code simplification and incorrect implementation would be appreciated!:+1
+
 ## Referenced. Thank you all:+1:
 baseline & cutout code : https://github.com/uoguelph-mlrg/Cutout<br>
 autoaugment code : https://github.com/DeepVoltaire/AutoAugment<br>
