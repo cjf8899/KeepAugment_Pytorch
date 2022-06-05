@@ -19,10 +19,9 @@ from util.keep_cutout import Cutout, Keep_Cutout, Keep_Cutout_Low
 from util.keep_autoaugment import CIFAR10Policy, Keep_Autoaugment, Keep_Autoaugment_Low
 from model.resnet import ResNet18, ResNet18_Early
 from model.wide_resnet import WideResNet, WideResNet_Early
-from model.shake_resnet import ShakeResNet, ShakeResNet_Early
 
 
-model_options = ['resnet', 'wideresnet', 'shake']
+model_options = ['resnet', 'wideresnet']
 dataset_options = ['cifar10']
 method_options = ['none', 'cutout', 'keep_cutout', 'keep_cutout_low', 'keep_cutout_early', 'keep_cutout_low_early',
                    'autoaugment','keep_autoaugment','keep_autoaugment_low', 'keep_autoaugment_early', 'keep_autoaugment_low_early']
@@ -114,10 +113,6 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           pin_memory=True,
                                           num_workers=8)
 
-if args.model == 'shake':
-    cnn = ShakeResNet(depth=26, w_base=64, label=10)
-    if 'early' in args.method:
-        cnn = ShakeResNet_Early(depth=26, w_base=64, label=10)
 elif args.model == 'wideresnet':
     cnn = WideResNet(depth=28,widen_factor=10, dropout_rate=0.0, num_classes=10)
     if 'early' in args.method:
@@ -127,8 +122,6 @@ else:
     if 'early' in args.method:
         cnn = ResNet18_Early(num_classes=10)
         
-print(cnn)
-
 cnn = cnn.cuda()
 criterion = nn.CrossEntropyLoss().cuda()
 cnn_optimizer = torch.optim.SGD(cnn.parameters(), lr=args.learning_rate,
