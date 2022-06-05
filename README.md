@@ -9,27 +9,28 @@
 
 ### CIFAR 10
 
-|              Model            |     ResNet-18     |  Wide ResNet-28-10  |     Shake-Shake     |
-| :---------------------------: | :---------------: | :-----------------: | :-----------------: |
-| Cutout                        | 95.6±0.1 (paper)  |  96.9±0.1 (paper)   |        96.8         |
-| KeepCutout                    |        96.0       |        TODO         |        96.9         |
-| KeepCutout (low resolution)   |        96.3       |        TODO         |        96.9         |
-| KeepCutout (early loss)       |        96.2       |        TODO         |        TODO         |
+|              Model            |     ResNet-18     |  Wide ResNet-28-10  |
+| :---------------------------: | :---------------: | :-----------------: |
+| Cutout                        |        0.956      |      0.9691         |
+| KeepCutout                    |        0.962      |      0.9721         |
+| KeepCutout (low resolution)   |        0.961      |      0.9719         |
+| KeepCutout (early loss)       |        0.9621     |        TODO         |
 
-|              Model              |     ResNet-18     |  Wide ResNet-28-10  |     Shake-Shake     |
-| :-----------------------------: | :---------------: | :-----------------: | :-----------------: |
-| AutoAugment                     |        TODO       |   97.3±0.1 (paper)  |   97.4±0.1 (paper)  |
-| KeepAutoAugment                 |        TODO       |        TODO         |        TODO         |
-| KeepAutoAugment (low resolution)|        TODO       |        TODO         |        TODO         |
-| KeepAutoAugment (early loss)    |        TODO       |        TODO         |        TODO         |
+|              Model              |     ResNet-18     |  Wide ResNet-28-10  |
+| :-----------------------------: | :---------------: | :-----------------: |
+| AutoAugment                     |       0.9607      |        0.9722       |
+| KeepAutoAugment                 |       0.9646      |        0.9747       |
+| KeepAutoAugment (low resolution)|       0.9639      |        0.9753       |
+| KeepAutoAugment (early loss)    |       0.9635      |        0.9748       |
 
 
 ## Run
 
 The type of method is <br>
-'keep_cutout', 'keep_cutout_low', 'keep_cutout_low_early'(TODO), 'keep_autoaugment', 'keep_autoaugment_low', 'keep_autoaugment_low_early'(TODO). 
+'cutout', 'keep_cutout', 'keep_cutout_low', 'keep_cutout_early', 'keep_cutout_low_early',<br>
+'autoaugment', 'keep_autoaugment', 'keep_autoaugment_low', 'keep_autoaugment_early', 'keep_autoaugment_low_early'. 
 
-The type of model is 'resnet', 'wide_resnet', 'shake'.
+The type of model is 'resnet', 'wide_resnet'.
 
 ```Shell
 python train.py --model resnet --method keep_cutout
