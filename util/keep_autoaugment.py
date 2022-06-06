@@ -14,11 +14,6 @@ from PIL import Image, ImageEnhance, ImageOps
 
 
 class Keep_Autoaugment_Low(object):
-    """Randomly mask out one or more patches from an image.
-    Args:
-        n_holes (int): Number of patches to cut out of each image.
-        length (int): The length (in pixels) of each square patch.
-    """
     def __init__(self, train_transform, mean, std, length, N, M, early=False):
         self.trans = train_transform
         self.length = int(length/2)
@@ -30,8 +25,6 @@ class Keep_Autoaugment_Low(object):
         self.pil = transforms.ToPILImage()
         self.auto = CIFAR10Policy()
         
-        
-
     def __call__(self, images, model):
         for param in model.parameters():
             param.requires_grad = False
@@ -46,7 +39,6 @@ class Keep_Autoaugment_Low(object):
         else:
             preds = model(images_half)
         
-        
         score, _ = torch.max(preds, 1)
         score.mean().backward()
         slc_, _ = torch.max(torch.abs(images_half.grad), dim=1)
@@ -57,7 +49,6 @@ class Keep_Autoaugment_Low(object):
         slc_ -= slc_.min(1, keepdim=True)[0]
         slc_ /= slc_.max(1, keepdim=True)[0]
         slc_ = slc_.view(b, h, w)
-        
         
         for i,(img, slc) in enumerate(zip(images_, slc_)):
             mask = np.ones((h*2, w*2), np.float32)
@@ -80,10 +71,6 @@ class Keep_Autoaugment_Low(object):
 
             img = self.pil(img)
             img = self.auto(img)
-#             for op, minval, maxval in ops:
-#                 val = (float(self.m) / 30) * float(maxval - minval) + minval
-#                 img = op(img, val)
-                
             img = self.tensor(img)
             img[:,y1: y2, x1: x2] = mask_zero[:,y1: y2, x1: x2]
             img = self.trans(self.pil(img))
@@ -91,19 +78,11 @@ class Keep_Autoaugment_Low(object):
         model.train()
         for param in model.parameters():
             param.requires_grad = True
-            
-#         for img in images:
-#             save_image(img, 'test2.jpg')
         return images.cuda()
 
 
 
 class Keep_Autoaugment(object):
-    """Randomly mask out one or more patches from an image.
-    Args:
-        n_holes (int): Number of patches to cut out of each image.
-        length (int): The length (in pixels) of each square patch.
-    """
     def __init__(self, train_transform, mean, std, length, N, M, early=False):
         self.length = length
         self.n = N
@@ -141,7 +120,6 @@ class Keep_Autoaugment(object):
         slc_ = slc_.view(b, h, w)
         
         for i,(img, slc) in enumerate(zip(images_, slc_)):
-#             ops = random.choices(self.augment_list, k=self.n)
             mask = np.ones((h, w), np.float32)
             mask_zero = torch.Tensor(np.zeros(img.shape, np.float32))
             
@@ -161,10 +139,6 @@ class Keep_Autoaugment(object):
 
             img = self.pil(img)
             img = self.auto(img)
-#             for op, minval, maxval in ops:
-#                 val = (float(self.m) / 30) * float(maxval - minval) + minval
-#                 img = op(img, val)
-                
             img = self.tensor(img)
             img[:,y1: y2, x1: x2] = mask_zero[:,y1: y2, x1: x2]
             images[i] = self.trans(self.pil(img))
@@ -172,9 +146,6 @@ class Keep_Autoaugment(object):
         model.train()
         for param in model.parameters():
             param.requires_grad = True
-            
-#         for img in images:
-#             save_image(img, 'test2.jpg')
         return images.cuda()
 
 
@@ -274,14 +245,6 @@ class Invert(object):
     def __call__(self, x, magnitude):
         return ImageOps.invert(x)
     
-    
-    
-    
-    
-    
-
-
-
 class ImageNetPolicy(object):
     """ Randomly choose one of the best 24 Sub-policies on ImageNet.
         Example:
