@@ -11,20 +11,21 @@
 
 |              Model            |     ResNet-18     |  Wide ResNet-28-10  |
 | :---------------------------: | :---------------: | :-----------------: |
-| Cutout                        |        0.956      |      0.9691         |
-| KeepCutout                    |        0.962      |      0.9721         |
-| KeepCutout (low resolution)   |        0.961      |      0.9719         |
-| KeepCutout (early loss)       |        0.9621     |        TODO         |
-| KeepCutout (low + early)      |        TODO       |        TODO         |
+| Cutout                        |        95.6       |        96.9         |
+| KeepCutout                    |        96.2       |        97.2         |
+| KeepCutout (low resolution)   |        96.1       |        97.1         |
+| KeepCutout (early loss)       |        96.2       |        TODO         |
+| KeepCutout (low + early)      |        96.2       |        TODO         |
 
 |              Model              |     ResNet-18     |  Wide ResNet-28-10  |
 | :-----------------------------: | :---------------: | :-----------------: |
-| AutoAugment                     |       0.9607      |        0.9722       |
-| KeepAutoAugment                 |       0.9646      |        0.9747       |
-| KeepAutoAugment (low resolution)|       0.9639      |        0.9753       |
-| KeepAutoAugment (early loss)    |       0.9635      |        0.9748       |
-| KeepAutoAugment (low + early)   |       TODO        |         TODO        |
+| AutoAugment                     |       96.0        |          97.2       |
+| KeepAutoAugment                 |       96.4        |          97.4       |
+| KeepAutoAugment (low resolution)|       96.3        |          97.5       |
+| KeepAutoAugment (early loss)    |       96.3        |          97.4       |
+| KeepAutoAugment (low + early)   |       96.5        |         TODO        |
 
+All results have slight differences(±0.1).
 
 ## Run
 
@@ -38,7 +39,7 @@ The type of model is 'resnet', 'wide_resnet'.
 python train.py --model resnet --method keep_cutout
 ```
 
-Any feedback on code simplification and incorrect implementation would be appreciated!:+1
+### Any feedback on code simplification and incorrect implementation would be appreciated!
 
 ## Referenced. Thank you all:+1:
 baseline & cutout code : https://github.com/uoguelph-mlrg/Cutout<br>
