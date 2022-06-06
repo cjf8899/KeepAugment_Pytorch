@@ -11,7 +11,7 @@
 
 |              Model            |     ResNet-18     |  Wide ResNet-28-10  |
 | :---------------------------: | :---------------: | :-----------------: |
-| Cutout                        |        95.6       |        96.9         |
+| Cutout                        |  95.6±0.1(paepr)  |  96.9±0.1(paepr)    |
 | KeepCutout                    |        96.2       |        97.2         |
 | KeepCutout (low resolution)   |        96.1       |        97.1         |
 | KeepCutout (early loss)       |        96.2       |        TODO         |
@@ -19,7 +19,7 @@
 
 |              Model              |     ResNet-18     |  Wide ResNet-28-10  |
 | :-----------------------------: | :---------------: | :-----------------: |
-| AutoAugment                     |       96.0        |          97.2       |
+| AutoAugment                     |       96.0        |  97.3±0.1(paepr)    |
 | KeepAutoAugment                 |       96.4        |          97.4       |
 | KeepAutoAugment (low resolution)|       96.3        |          97.5       |
 | KeepAutoAugment (early loss)    |       96.3        |          97.4       |
@@ -30,8 +30,8 @@ All results have slight differences(±0.1).
 ## Run
 
 The type of method is <br>
-'cutout', 'keep_cutout', 'keep_cutout_low', 'keep_cutout_early', 'keep_cutout_low_early',<br>
-'autoaugment', 'keep_autoaugment', 'keep_autoaugment_low', 'keep_autoaugment_early', 'keep_autoaugment_low_early'. 
+'keep_cutout', 'keep_cutout_low', 'keep_cutout_early', 'keep_cutout_low_early',<br>
+'keep_autoaugment', 'keep_autoaugment_low', 'keep_autoaugment_early', 'keep_autoaugment_low_early'. 
 
 The type of model is 'resnet', 'wide_resnet'.
 
