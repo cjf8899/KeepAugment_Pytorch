@@ -15,16 +15,16 @@ from torchvision.utils import make_grid
 from torchvision import datasets, transforms
 
 from util.misc import CSVLogger
-from util.keep_cutout import Cutout, Keep_Cutout, Keep_Cutout_Low
-from util.keep_autoaugment import CIFAR10Policy, Keep_Autoaugment, Keep_Autoaugment_Low
+from util.keep_cutout import Keep_Cutout, Keep_Cutout_Low
+from util.keep_autoaugment import Keep_Autoaugment, Keep_Autoaugment_Low
 from model.resnet import ResNet18, ResNet18_Early
 from model.wide_resnet import WideResNet, WideResNet_Early
 
 
 model_options = ['resnet', 'wideresnet']
 dataset_options = ['cifar10']
-method_options = ['none', 'cutout', 'keep_cutout', 'keep_cutout_low', 'keep_cutout_early', 'keep_cutout_low_early',
-                   'autoaugment','keep_autoaugment','keep_autoaugment_low', 'keep_autoaugment_early', 'keep_autoaugment_low_early']
+method_options = ['keep_cutout', 'keep_cutout_low', 'keep_cutout_early', 'keep_cutout_low_early',
+                  'keep_autoaugment','keep_autoaugment_low', 'keep_autoaugment_early', 'keep_autoaugment_low_early']
 
 parser = argparse.ArgumentParser(description='CNN')
 parser.add_argument('--dataset', '-d', default='cifar10', choices=dataset_options)
@@ -37,7 +37,7 @@ parser.add_argument('--N', type=int, default=3, help='number of autoaugments')
 parser.add_argument('--M', type=int, default=24, help='magnitude of autoaugments')
 parser.add_argument('--no-cuda', action='store_true', default=False, help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=0, help='random seed (default: 1)')
-parser.add_argument('--method', default='none', choices=method_options)
+parser.add_argument('--method', default='keep_cutout', choices=method_options)
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 cudnn.benchmark = True  # Should make training should go faster for large models
@@ -66,11 +66,7 @@ test_transform = transforms.Compose([
     transforms.ToTensor(),
     normalize])
 
-if args.method=='cutout':
-    train_transform.transforms.append(Cutout(n_holes=1, length=args.length))
-elif args.method=='autoaugment':
-    train_transform.transforms.insert(2, CIFAR10Policy())
-elif args.method=='keep_cutout':
+if args.method=='keep_cutout':
     keep = Keep_Cutout(train_transform, mean, std, args.length)
 elif args.method=='keep_cutout_low':
     keep = Keep_Cutout_Low(train_transform, mean, std, args.length)
@@ -78,6 +74,7 @@ elif args.method=='keep_cutout_early':
     keep = Keep_Cutout(train_transform, mean, std, args.length, True)
 elif args.method=='keep_cutout_low_early':
     keep = Keep_Cutout_Low(train_transform, mean, std, args.length, True)
+    
 elif args.method=='keep_autoaugment':
     keep = Keep_Autoaugment(train_transform, mean, std, args.length, args.N, args.M)
 elif args.method=='keep_autoaugment_low':
